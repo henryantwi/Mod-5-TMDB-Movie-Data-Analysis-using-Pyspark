@@ -1,0 +1,39 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Task and instruction files
+task.md
+copilot-instructions.md
+
+# Environment and lock files
+uv.lock
+.env
+
+# Logs
+logs/
+*.log
+
+# Data directories (raw data is fetched, not stored in git)
+data/
+output/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
