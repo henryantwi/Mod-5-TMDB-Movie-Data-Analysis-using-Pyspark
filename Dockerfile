@@ -1,41 +1,39 @@
-# Use Python 3.10 slim-bookworm image (stable Debian 12 base)
-FROM python:3.10-slim-bookworm
+# Use official Spark image with Python 3 and Java 17
+FROM spark:python3-java17
 
-# Set the working directory inside the container
-WORKDIR /app
+# Switch to root to install packages
+USER root
 
-# Install system dependencies
-# - OpenJDK 17: Required for PySpark
-# - curl & ca-certificates: Required to install uv
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    openjdk-17-jre-headless \
-    curl \
-    ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# 1. Install uv for fast package management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
-# Install uv using the standalone installer (per official docs)
-ADD https://astral.sh/uv/install.sh /uv-installer.sh
-RUN sh /uv-installer.sh && rm /uv-installer.sh
+# 2. Copy requirements
+COPY requirements.txt /tmp/
 
-# Ensure uv is on the PATH
-ENV PATH="/root/.local/bin/:$PATH"
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# 3. Install dependencies with uv (fast!)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system -r /tmp/requirements.txt
 
-# Copy requirements file
-COPY requirements.txt .
+# 4. Install Jupyter for notebook support
+RUN uv pip install --system jupyterlab ipykernel
 
-# Install Python dependencies using uv
-# --system: Install into the system Python environment (avoids creating a venv inside Docker)
-RUN uv pip install --system --no-cache-dir -r requirements.txt
+# 5. Create home directory for spark user (the image uses /nonexistent by default)
+# Also create Jupyter runtime directories to avoid permission errors
+RUN mkdir -p /home/spark/work /home/spark/src /home/spark/data \
+             /home/spark/.local/share/jupyter/runtime \
+             /home/spark/.jupyter && \
+    chown -R spark:spark /home/spark && \
+    usermod -d /home/spark spark
 
-# Copy the rest of the application code
-COPY . .
+# Switch to spark user
+USER spark
 
-# Create directories for data and logs if they don't exist
-# This ensures permissions are correct when we mount volumes
-RUN mkdir -p data/raw data/processed logs output/visualizations
+# Set the working directory
+WORKDIR /home/spark/work
 
-# Default command to run the pipeline
-CMD ["python", "main.py"]
+# Environment variables
+ENV HOME=/home/spark
+ENV SPARK_HOME=/opt/spark
+ENV PYSPARK_PYTHON=python3
+ENV PYSPARK_DRIVER_PYTHON=python3
+ENV JUPYTER_RUNTIME_DIR=/home/spark/.local/share/jupyter/runtime

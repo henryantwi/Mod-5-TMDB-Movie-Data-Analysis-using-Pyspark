@@ -1,343 +1,95 @@
-# 🎬 TMDB Movie Data Analysis Pipeline
+# TMDB Movie Data Analysis  (PySpark Edition)
 
-A comprehensive data engineering project that extracts, transforms, and analyzes movie data from The Movie Database (TMDB) API using **PySpark**.
+## What This Project Is About
 
-![Python](https://img.shields.io/badge/Python-3.14+-blue.svg)
-![PySpark](https://img.shields.io/badge/PySpark-4.1+-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+I updated this project to transition from a single-node Pandas approach to a scalable **PySpark** architecture. The goal remains to understand movie success drivers, but the underlying tech stack is now designed to handle "Big Data" scale.
 
-## 📋 Table of Contents
+**Techniques Used:**
+*   **PySpark** for distributed data processing (ETL) and aggregation.
+*   **Pandas & Seaborn** for final lightweight visualization.
+*   **Robust ETL**: Retry mechanics for APIs, structured logging, and Parquet storage.
+*   **Orchestration**: A main Jupyter Notebook orchestrates the entire flow.
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Configuration](#-configuration)
-- [Usage](#-usage)
-- [Pipeline Architecture](#-pipeline-architecture)
-- [KPI Analysis](#-kpi-analysis)
-- [Visualizations](#-visualizations)
-- [Output Files](#-output-files)
-- [Contributing](#-contributing)
+## Architecture
 
-## 🎯 Overview
+1.  **Extract**: `src/fetch_data.py` uses `requests` and `tenacity` to reliably fetch data from TMDB API and save raw JSON.
+2.  **Transform**: `src/process_data.py` uses **PySpark** to load nested JSON, flatten structures (arrays/structs), clean types, and save optimized **Parquet** files.
+3.  **Load/Analyze**: `src/analysis.py` uses **PySpark** transformations to aggregate stats (Revenue, ROI, Franchises) efficiently.
+4.  **Visualize**: Results are collected to Pandas for clean plotting in the notebook.
 
-This project implements a complete **ETL (Extract, Transform, Load)** pipeline for movie data analysis. It fetches movie information from the TMDB API, cleans and transforms the data using PySpark, performs KPI analysis, and generates insightful visualizations.
-
-### What You'll Learn
-
-- How to build a production-ready ETL pipeline
-- Working with REST APIs (with retry mechanisms)
-- Data cleaning and transformation with PySpark
-- KPI calculations and business analytics
-- Data visualization with Matplotlib
-
-## ✨ Features
-
-### Data Extraction
-- 🔄 **Retry Mechanism**: Automatic retries for rate limits and HTTP errors
-- 💾 **Data Caching**: Cache raw data to avoid repeated API calls
-- 📝 **Comprehensive Logging**: All operations logged to file and console
-
-### Data Transformation
-- 🧹 **Data Cleaning**: Handle missing values, invalid data, and duplicates
-- 🔄 **Type Conversion**: Proper data types for all columns
-- 💱 **Currency Normalization**: Convert budget/revenue to millions USD
-- 📊 **JSON Processing**: Extract nested data from complex columns
-
-### Analysis & Visualization
-- 📈 **KPI Rankings**: Top movies by revenue, profit, ROI, rating, and popularity
-- 🎭 **Franchise Analysis**: Compare franchise vs standalone movie performance
-- 🎬 **Director Analysis**: Find most successful directors
-- 📊 **5 Visualization Charts**: Professional annotated charts
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-tmdb-movie-analysis/
-├── 📂 etl/                          # ETL Pipeline Modules
-│   ├── __init__.py                  # Package initialization
-│   ├── extract.py                   # TMDB API data extraction
-│   ├── transform.py                 # Data cleaning & transformation
-│   └── load.py                      # Spark DataFrame operations
-│
-├── 📂 analysis/                     # Analysis Modules
-│   ├── __init__.py                  # Package initialization
-│   ├── kpi.py                       # KPI calculations & rankings
-│   └── visualization.py             # Chart generation
-│
-├── 📂 utils/                        # Utility Modules
-│   ├── __init__.py                  # Package initialization
-│   ├── config.py                    # Configuration management
-│   └── logger.py                    # Logging setup
-│
-├── 📂 data/                         # Data Storage (git-ignored)
-│   ├── raw/                         # Raw API responses
-│   └── processed/                   # Cleaned data (Parquet/CSV)
-│
-├── 📂 output/                       # Output Files (git-ignored)
-│   └── visualizations/              # Generated charts
-│
-├── 📂 logs/                         # Log Files (git-ignored)
-│
-├── main.py                          # Pipeline entry point
-├── requirements.txt                 # Python dependencies
-├── pyproject.toml                   # Project configuration
-├── .env.example                     # Environment template
-├── .gitignore                       # Git ignore rules
-└── README.md                        # This file
+Movie-Data-Analysis/
+├── data/
+│   ├── raw/                    # Raw JSON from TMDB API
+│   └── processed/              # Parquet files (PySpark output)
+├── notebooks/
+│   └── main.ipynb              # MAIN ENTRY POINT (Orchestrator)
+├── src/
+│   ├── fetch_data.py           # Robust API Fetcher
+│   ├── process_data.py         # PySpark ETL logic
+│   ├── analysis.py             # PySpark Analysis Logic
+│   └── logger.py               # Centralized logging
+├── requirements.txt
+└── README.md
 ```
 
-## 🚀 Installation
+## Getting Started
 
 ### Prerequisites
 
-- Python 3.14 or higher
-- Java 8 or 11 (required for PySpark)
-- [uv](https://docs.astral.sh/uv/) package manager (recommended)
+1.  **Python 3.10+** (Managed via `uv` or `pip`).
+2.  **Java JDK 17+** (Required for PySpark).
+3.  **Windows Users**: You MUST have `winutils.exe` and `hadoop.dll` configured in `%HADOOP_HOME%/bin`.
 
-### Step-by-Step Setup
+### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd tmdb-movie-analysis
-   ```
+1.  **Install Dependencies**:
+    ```bash
+    uv sync  # or pip install -r requirements.txt
+    ```
 
-2. **Create and activate virtual environment**
-   ```bash
-   # Using uv (recommended)
-   uv venv
-   
-   # Activate on Windows
-   .\.venv\Scripts\Activate.ps1
-   
-   # Activate on Linux/Mac
-   source .venv/bin/activate
-   ```
+2.  **Set up API Key**:
+    - Create a `.env` file:
+      ```
+      TMDB_API_KEY=your_api_key_here
+      ```
 
-3. **Install dependencies**
-   ```bash
-   uv add -r requirements.txt
-   ```
+### Running the Analysis
 
-4. **Set up environment variables**
-   ```bash
-   # Copy the example file
-   cp .env.example .env
-   
-   # Edit .env and add your TMDB API key
-   # TMDB_API_KEY=your_api_key_here
-   ```
+The entire pipeline is orchestrated in **Jupyter**:
 
-## ⚙️ Configuration
+1.  Start Jupyter Lab:
+    ```bash
+    jupyter lab
+    ```
+2.  Open `notebooks/main.ipynb`.
+3.  Run all cells to execute the pipeline step-by-step.
 
-### Getting a TMDB API Key
+### Running Modules Individually
 
-1. Create an account at [TMDB](https://www.themoviedb.org/)
-2. Go to Settings → API
-3. Request an API key (choose "Developer")
-4. Copy your API key to the `.env` file
-
-### Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `TMDB_API_KEY` | Your TMDB API key | Yes |
-
-## 💻 Usage
-
-### Basic Usage
-
-Run the complete pipeline:
+You can also run specific modules as scripts:
 
 ```bash
-python main.py
+# Fetch Data
+python -m src.fetch_data
+
+# Process Data (PySpark Local)
+python -m src.process_data
+
+# Run Analysis (PySpark Local)
+python -m src.analysis
 ```
 
-### Command Line Options
+## Comparisons: Pandas vs. PySpark
 
-```bash
-# Use cached data (skip API extraction)
-python main.py --skip-extract
-
-# Skip visualization generation
-python main.py --skip-visualization
-
-# Choose output format
-python main.py --output-format csv      # CSV only
-python main.py --output-format parquet  # Parquet only (default)
-python main.py --output-format all      # All formats
-
-# Combine options
-python main.py --skip-extract --output-format all
-```
-
-### Help
-
-```bash
-python main.py --help
-```
-
-## 🔧 Pipeline Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    TMDB Movie Data Pipeline                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│  ┌──────────┐    ┌─────────────┐    ┌──────────┐    ┌─────────┐ │
-│  │ EXTRACT  │───▶│  TRANSFORM  │───▶│   LOAD   │───▶│ ANALYZE │ │
-│  │          │    │             │    │          │    │         │ │
-│  │ TMDB API │    │  PySpark    │    │ DataFrame│    │  KPIs   │ │
-│  │ + Retry  │    │  Cleaning   │    │ + Save   │    │ + Viz   │ │
-│  └──────────┘    └─────────────┘    └──────────┘    └─────────┘ │
-│       │                │                 │               │       │
-│       ▼                ▼                 ▼               ▼       │
-│  ┌──────────┐    ┌─────────────┐    ┌──────────┐    ┌─────────┐ │
-│  │ Raw JSON │    │  Cleaned    │    │ Parquet/ │    │  Charts │ │
-│  │  Files   │    │    Data     │    │ CSV/JSON │    │  (PNG)  │ │
-│  └──────────┘    └─────────────┘    └──────────┘    └─────────┘ │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Data Flow
-
-1. **Extract**: Fetch movie data from TMDB API with retry mechanism
-2. **Transform**: Clean, process JSON columns, handle missing values
-3. **Load**: Create PySpark DataFrame and save to multiple formats
-4. **Analyze**: Calculate KPIs and generate visualizations
-
-## 📊 KPI Analysis
-
-### Movie Rankings
-
-| Metric | Description |
-|--------|-------------|
-| Highest Revenue | Top movies by box office earnings |
-| Highest Budget | Most expensive productions |
-| Highest Profit | Revenue - Budget |
-| Highest ROI | Revenue / Budget (min $10M budget) |
-| Most Voted | Movies with most user votes |
-| Highest Rated | Best ratings (min 10 votes) |
-| Most Popular | Highest popularity score |
-
-### Advanced Analysis
-
-- **Franchise vs Standalone**: Compare performance metrics
-- **Top Franchises**: Most successful movie franchises
-- **Top Directors**: Directors by total revenue and ratings
-- **Genre Statistics**: Performance by genre
-- **Yearly Trends**: Box office trends over time
-
-### Search Queries
-
-```python
-# Search 1: Sci-Fi Action movies with Bruce Willis (sorted by rating)
-# Search 2: Uma Thurman + Quentin Tarantino movies (sorted by runtime)
-```
-
-## 📈 Visualizations
-
-The pipeline generates 5 professional charts:
-
-1. **Revenue vs Budget** (`revenue_vs_budget.png`)
-   - Scatter plot showing the relationship between movie budgets and revenues
-   - Point size indicates popularity
-   - Break-even line for reference
-
-2. **ROI by Genre** (`roi_by_genre.png`)
-   - Horizontal bar chart of mean ROI per genre
-   - Color-coded by performance (green=high, red=low)
-
-3. **Popularity vs Rating** (`popularity_vs_rating.png`)
-   - Scatter plot revealing quality vs popularity relationship
-   - Color intensity shows vote count
-
-4. **Yearly Trends** (`yearly_trends.png`)
-   - Line chart showing revenue, budget, and rating trends over time
-   - Dual y-axis for financial and rating metrics
-
-5. **Franchise vs Standalone** (`franchise_vs_standalone.png`)
-   - Grouped bar chart comparing key metrics
-   - Revenue, budget, popularity, and rating comparison
-
-## 📂 Output Files
-
-### Data Files
-
-| File | Format | Location |
-|------|--------|----------|
-| `all_movies_raw.json` | JSON | `data/raw/` |
-| `movies_processed/` | Parquet | `data/processed/` |
-| `movies_processed.csv/` | CSV | `data/processed/` |
-| `movies_processed.json/` | JSON | `data/processed/` |
-
-### Visualization Files
-
-All charts are saved as PNG files in `output/visualizations/`:
-
-- `revenue_vs_budget.png`
-- `roi_by_genre.png`
-- `popularity_vs_rating.png`
-- `yearly_trends.png`
-- `franchise_vs_standalone.png`
-
-### Log Files
-
-Detailed logs are saved in `logs/` with timestamps:
-- `tmdb_pipeline_YYYYMMDD_HHMMSS.log`
-
-## 🐳 Docker Support
-
-You can run the entire pipeline in a Docker container to ensure a consistent environment.
-
-### Prerequisites for Docker
-- Docker Desktop installed and running
-
-### Running with Docker Compose (Recommended)
-
-1. **Build and Run**
-   ```bash
-   docker-compose up --build
-   ```
-
-2. **Run in Background**
-   ```bash
-   docker-compose up -d --build
-   ```
-
-3. **View Logs**
-   ```bash
-   docker-compose logs -f
-   ```
-
-4. **Stop Containers**
-   ```bash
-   docker-compose down
-   ```
-
-The pipeline will run, save data to your local `data/` folder, and generate charts in `output/` just like running locally.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- [TMDB](https://www.themoviedb.org/) for providing the movie data API
-- [PySpark](https://spark.apache.org/docs/latest/api/python/) for distributed data processing
-- [Matplotlib](https://matplotlib.org/) for visualization capabilities
+| Feature | Pandas Implementation | PySpark Implementation |
+| :--- | :--- | :--- |
+| **Execution** | Eager (In-Memory) | Lazy (DAG Execution) |
+| **Handling Nested JSON** | Python loops / slow apply() | Native `transform`, `array_join` functions |
+| **Storage** | CSV (Slow, untyped) | Parquet (Fast, columnar, typed) |
+| **Scaling** | Limited by RAM | Distributed Cluster Capable |
 
 ---
-
-**Made with ❤️ for Data Engineering**
+*Updated Jan 2026 for Big Data Engineering Module.*

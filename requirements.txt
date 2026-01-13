@@ -1,8 +1,11 @@
-pyspark>=3.5.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-matplotlib>=3.8.0
-pandas>=2.1.0
-tenacity>=8.2.0
+# Core dependencies
+requests
 python-dotenv
-icecream
+tenacity
+pyspark
+
+# Data Analysis & Visualization
+pandas>=2.2.0
+matplotlib
+seaborn
+pyarrow
