@@ -1,7 +1,7 @@
 services:
   jupyter:
     build: .
-    container_name: jupyter
+    container_name: tmdb-spark-jupyter
     ports:
       - "8888:8888"   # Jupyter Notebook
     env_file:
