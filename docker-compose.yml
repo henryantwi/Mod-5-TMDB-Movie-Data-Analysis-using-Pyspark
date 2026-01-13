@@ -1,22 +1,19 @@
 services:
-  tmdb-spark-pipeline:
+  jupyter:
     build: .
-    container_name: tmdb-spark-pipeline
-    volumes:
-      # Map local 'data' folder to container's 'data' folder
-      # This allows you to see the downloaded/processed files on your machine
-      - ./data:/app/data
-      
-      # Map local 'output' folder to see visualizations
-      - ./output:/app/output
-      
-      # Map local 'logs' folder to persist logs
-      - ./logs:/app/logs
-
-    # Load environment variables (API Key) from your local .env file
+    container_name: jupyter
+    ports:
+      - "8888:8888"   # Jupyter Notebook
     env_file:
       - .env
-      
     environment:
-      # efficient logging
-      - PYTHONUNBUFFERED=1
+      - PYSPARK_PYTHON=python3
+      - JUPYTER_TOKEN=spark
+      - DATA_DIR=/home/spark/data
+    volumes:
+      - ./notebooks:/home/spark/work
+      - ./src:/home/spark/src
+      - ./data:/home/spark/data
+      - ./requirements.txt:/home/spark/requirements.txt
+      - ./start-jupyter.sh:/usr/local/bin/start-jupyter.sh
+    command: ["bash", "/usr/local/bin/start-jupyter.sh"]
