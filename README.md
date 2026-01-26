@@ -20,7 +20,6 @@ I updated this project to transition from a single-node Pandas approach to a sca
 ## Project Structure
 
 ```
-Movie-Data-Analysis/
 ├── data/
 │   ├── raw/                    # Raw JSON from TMDB API
 │   └── processed/              # Parquet files (PySpark output)
