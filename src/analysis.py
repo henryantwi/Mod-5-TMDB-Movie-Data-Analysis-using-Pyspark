@@ -56,7 +56,16 @@ class MovieAnalyzer:
                    filter_col: str = None, filter_val: Union[int, float] = None):
         """
         Ranks movies based on a specific metric.
-        Returns a Pandas DataFrame for easy display/plotting.
+
+        Args:
+            metric (str): Column name to rank by (e.g., 'revenue_musd', 'roi', 'profit').
+            ascending (bool, optional): Sort in ascending order if True. Defaults to False.
+            top_n (int, optional): Number of top results to return. Defaults to 5.
+            filter_col (str, optional): Column name to filter on before ranking. Defaults to None.
+            filter_val (Union[int, float], optional): Minimum value for filter_col. Defaults to None.
+
+        Returns:
+            pd.DataFrame: Pandas DataFrame with 'title' and metric columns, sorted and limited to top_n.
         """
         data = self.df
         
@@ -85,6 +94,16 @@ class MovieAnalyzer:
         stats['flops'] = self.rank_movies('profit', ascending=True)
         # highest ROI (budget > 10M)
         stats['top_roi'] = self.rank_movies('roi', filter_col='budget_musd', filter_val=10)
+        # Lowest ROI (budget > 10M)
+        stats['flops_roi'] = self.rank_movies('roi', ascending=True, filter_col='budget_musd', filter_val=10)
+        # Most Voted Movies
+        stats['most_voted'] = self.rank_movies('vote_count')
+        # Highest Rated Movies (votes >= 10)
+        stats['highest_rated'] = self.rank_movies('vote_average', filter_col='vote_count', filter_val=10)
+        # Lowest Rated Movies (votes >= 10)
+        stats['lowest_rated'] = self.rank_movies('vote_average', ascending=True, filter_col='vote_count', filter_val=10)
+        # Most Popular Movies
+        stats['most_popular'] = self.rank_movies('popularity')
         
         return stats
 
@@ -241,6 +260,35 @@ class MovieAnalyzer:
         plt.xlabel("Year")
         plt.ylabel("Amount (M$)")
         plt.savefig(out_path / "yearly_trends.png")
+        plt.close()
+        
+        # 5. Franchise vs Standalone
+        stats, _ = self.analyze_franchises()
+        stats_reset = stats.reset_index()
+
+        # Melt the dataframe to have Revenue and Budget in one column
+        stats_melted = stats_reset.melt(
+            id_vars="is_franchise", 
+            value_vars=["avg_revenue", "avg_budget"], 
+            var_name="Metric", 
+            value_name="Amount (M$)"
+        )
+
+        # Rename the metrics for better legend readability
+        stats_melted["Metric"] = stats_melted["Metric"].replace({
+            "avg_revenue": "Revenue", 
+            "avg_budget": "Budget"
+        })
+
+        plt.figure()
+        # Create grouped bar chart
+        sns.barplot(data=stats_melted, x="Metric", y="Amount (M$)", hue="is_franchise", palette="muted")
+
+        plt.title("Franchise vs. Standalone: Revenue and Budget Comparison")
+        plt.ylabel("Amount (M$)")
+        plt.xlabel("Metric")
+        plt.legend(title="Franchise Type")
+        plt.savefig(out_path / "franchise_vs_standalone.png")
         plt.close()
         
         logger.info("Plots saved successfully.")

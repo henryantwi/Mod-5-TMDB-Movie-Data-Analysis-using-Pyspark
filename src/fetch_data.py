@@ -48,7 +48,7 @@ class TMDBFetcher:
         retry=retry_if_exception_type((requests.exceptions.RequestException,)),
         reraise=True
     )
-    def fetch_movie_details(self, movie_id: int) -> Optional[Dict[str, Any]]:
+    def fetch_movie_details(self, movie_id: int) -> dict[str, Any] | None:
         """
         Fetches details for a specific movie ID with retries.
         
@@ -56,7 +56,7 @@ class TMDBFetcher:
             movie_id (int): The TMDB movie ID.
             
         Returns:
-            dict: The JSON response dictionary, or None if 404.
+            dict[str, Any] | None: The JSON response dictionary, or None if 404.
         """
         url = f"{self.BASE_URL}/movie/{movie_id}"
         params = {
@@ -92,14 +92,15 @@ class TMDBFetcher:
             movie_ids (List[int]): List of movie IDs.
             
         Returns:
-            List[Dict]: List of movie data dictionaries.
-        """
+            List[dict[str, Any]]: List of movie data dictionaries.
+        """ 
         movies = []
         total = len(movie_ids)
         
         for i, movie_id in enumerate(movie_ids):
             # Skip ID 0 as it's often a placeholder/error in datasets
             if movie_id == 0:
+                self.logger.info("Skipping movie ID 0 as it's invalid.")
                 continue
                 
             try:
@@ -113,12 +114,12 @@ class TMDBFetcher:
         return movies
 
     @staticmethod
-    def save_raw_data(data: List[Dict[str, Any]], filename: Path) -> None:
+    def save_raw_data(data: list[dict[str, Any]], filename: Path) -> None:
         """
         Saves the fetched data to a JSON file.
         
         Args:
-            data (List[Dict]): Data to save.
+            data (list[dict[str, Any]]): Data to save.
             filename (Path): Destination path.
         """
         path = Path(filename)

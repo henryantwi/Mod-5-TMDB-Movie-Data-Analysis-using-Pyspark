@@ -90,6 +90,3 @@ python -m src.analysis
 | **Handling Nested JSON** | Python loops / slow apply() | Native `transform`, `array_join` functions |
 | **Storage** | CSV (Slow, untyped) | Parquet (Fast, columnar, typed) |
 | **Scaling** | Limited by RAM | Distributed Cluster Capable |
-
----
-*Updated Jan 2026 for Big Data Engineering Module.*
