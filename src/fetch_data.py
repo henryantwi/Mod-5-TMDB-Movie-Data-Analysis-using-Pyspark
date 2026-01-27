@@ -3,6 +3,7 @@ import json
 import requests
 from pathlib import Path
 from typing import List, Dict, Optional, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
@@ -84,33 +85,57 @@ class TMDBFetcher:
             self.logger.error(f"An unexpected error occurred for movie {movie_id}: {err}")
             raise
 
-    def fetch_specific_movies(self, movie_ids: List[int]) -> List[Dict[str, Any]]:
+    def fetch_specific_movies(self, movie_ids: List[int], max_workers: int = 10) -> List[Dict[str, Any]]:
         """
-        Fetches data for a list of movie IDs.
+        Fetches data for a list of movie IDs concurrently.
         
         Args:
             movie_ids (List[int]): List of movie IDs.
+            max_workers (int): Maximum number of concurrent threads (default: 10).
             
         Returns:
             List[dict[str, Any]]: List of movie data dictionaries.
         """ 
-        movies = []
-        total = len(movie_ids)
+        # Filter out invalid movie IDs (e.g., 0)
+        valid_movie_ids = [mid for mid in movie_ids if mid != 0]
+        if len(valid_movie_ids) < len(movie_ids):
+            self.logger.info(f"Skipping {len(movie_ids) - len(valid_movie_ids)} invalid movie ID(s) (e.g., ID 0).")
         
-        for i, movie_id in enumerate(movie_ids):
-            # Skip ID 0 as it's often a placeholder/error in datasets
-            if movie_id == 0:
-                self.logger.info("Skipping movie ID 0 as it's invalid.")
-                continue
-                
+        movies = []
+        total = len(valid_movie_ids)
+        completed = 0
+        
+        def fetch_single_movie(movie_id: int) -> Optional[Dict[str, Any]]:
+            """Helper function to fetch a single movie and handle errors."""
             try:
-                data = self.fetch_movie_details(movie_id)
-                if data:
-                    movies.append(data)
-                self.logger.info(f"Progress: {i+1}/{total} completed.")
+                return self.fetch_movie_details(movie_id)
             except Exception as e:
                 self.logger.error(f"Failed to fetch movie {movie_id} after retries. Skipping. Error: {e}")
+                return None
+        
+        self.logger.info(f"Starting concurrent fetch of {total} movies with {max_workers} workers...")
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit all fetch tasks
+            future_to_movie_id = {
+                executor.submit(fetch_single_movie, movie_id): movie_id 
+                for movie_id in valid_movie_ids
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_movie_id):
+                movie_id = future_to_movie_id[future]
+                completed += 1
                 
+                try:
+                    data = future.result()
+                    if data:
+                        movies.append(data)
+                    self.logger.info(f"Progress: {completed}/{total} completed (Movie ID: {movie_id}).")
+                except Exception as e:
+                    self.logger.error(f"Unexpected error processing result for movie {movie_id}: {e}")
+        
+        self.logger.info(f"Fetch complete. Successfully retrieved {len(movies)} out of {total} movies.")
         return movies
 
     @staticmethod
